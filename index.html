@@ -37,9 +37,9 @@
 
                 const result = await response.text(); // Assuming your API returns text (CSV)
                 document.getElementById('result').textContent = result;
-            } catch (error) {
-                document.getElementById('result').textContent = 'Error: ' + error.message;
-            }
+                } catch (error) {
+                    document.getElementById('result').textContent = 'Error: ' + error.message + ' (Status: ' + (error.response ? error.response.status : 'unknown') + ')';
+                }
         });
     </script>
 </body>

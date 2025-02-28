@@ -2,68 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tax Scraper Test</title>
+    <title>Tax Scraper</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        #result { margin-top: 20px; white-space: pre-wrap; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background-color: #ecf0f1;
+            color: #7f8c8d;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        input[type="file"]:hover {
+            border-color: #2980b9;
+            background-color: #dfe6e9;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        #result.success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        #result.error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
     </style>
 </head>
 <body>
-    <h1>Test Tax Scraper API</h1>
-    <form id="uploadForm">
-        <input type="file" id="csvFile" accept=".csv" required>
-        <button type="submit">Upload CSV</button>
-    </form>
-    <div id="result"></div>
+    <div class="container">
+        <h1>Tax Scraper</h1>
+        <form id="uploadForm">
+            <input type="file" id="csvFile" accept=".csv" required>
+            <button type="submit">Upload CSV</button>
+        </form>
+        <div id="result"></div>
+    </div>
 
-<script>
-    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
-        event.preventDefault();
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-        const fileInput = document.getElementById('csvFile');
-        const file = fileInput.files[0];
-        if (!file) return;
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            if (!file) return;
 
-        const formData = new FormData();
-        formData.append('csvFile', file);
+            const formData = new FormData();
+            formData.append('csvFile', file);
 
-        try {
-            const response = await fetch('https://taxscraper-485170627345.us-central1.run.app/getTaxRates', {
-                method: 'POST',
-                body: formData
-            });
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Processing...';
+            resultDiv.className = '';
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`API request failed: ${response.status} - ${errorText}`);
-            }
+            try {
+                const response = await fetch('https://taxscraper-485170627345.us-central1.run.app/getTaxRates', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            // Get the filename from the Content-Disposition header
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = 'tax_results.zip'; // Fallback filename
-            if (contentDisposition) {
-                const matches = /filename="([^"]+)"/.exec(contentDisposition);
-                if (matches && matches[1]) {
-                    filename = matches[1];
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API request failed: ${response.status} - ${errorText}`);
                 }
+
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'tax_results.zip';
+                if (contentDisposition) {
+                    const matches = /filename="([^"]+)"/.exec(contentDisposition);
+                    if (matches && matches[1]) {
+                        filename = matches[1];
+                    }
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                resultDiv.textContent = `File "${filename}" downloaded successfully!`;
+                resultDiv.className = 'success';
+            } catch (error) {
+                resultDiv.textContent = 'Error: ' + error.message;
+                resultDiv.className = 'error';
             }
-
-            // Trigger download with the correct filename
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename; // Use the server-provided filename
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            document.getElementById('result').textContent = `File "${filename}" downloaded successfully!`;
-        } catch (error) {
-            document.getElementById('result').textContent = 'Error: ' + error.message;
-        }
-    });
-</script>
+        });
+    </script>
 </body>
 </html>
